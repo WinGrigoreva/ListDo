@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Список дел</title>
+
+	<link href="bootstrap-theme.css" rel="stylesheet">
+	<link href="bootstrap-theme.min.css" rel="stylesheet">
+	<link href="bootstrap.css" rel="stylesheet">
+	<link href="bootstrap.min.css" rel="stylesheet">
+
+	<script type="text/javascript">
+	window.onload = function() {
+	
+		if(localStorage.getItem('lastId') == null) localStorage.setItem('lastId',0);
+		//Загрузка списка дел
+		var listActions = Load();
+		while(listActions.length != 0)
+		{
+			var action = listActions.pop();
+			newEl(action);
+		}
+	}
+	
+	function Load() {
+ 		var listActions = []
+ 		for (var i = localStorage.length; i > 0; i--) {
+ 			var key = localStorage.key(i-1);
+ 			if(key != 'lastId') listActions.push(JSON.parse(localStorage[key]));
+ 		}
+ 		return listActions;
+ 	}
+
+
+	function newEl(action) {
+		var list,li, st='';
+		list = document.getElementById('list');
+		li = document.createElement('li');
+		li.draggable = true;
+		li.id = action.name;
+		if(action.state) st = '<form class="form-inline" role="form"> <input type="checkbox" checked="checked" disabled = "true" onclick="clik(this.parentNode.parentNode);"> <span id="result" style="text-decoration: line-through;" ondblclick ="edit(this);">' + action.text + '</span> <img src="remove.png" style="display:inline" onclick="del(this.parentNode.parentNode);"></form>'
+			else st = '<form class="form-inline" role="form"> <input type="checkbox" onclick="clik(this.parentNode.parentNode);"> <span id="result" style="text-decoration: none;" ondblclick ="edit(this);">' + action.text + '</span> <img src="remove.png" style="display:none" onclick="del(this.parentNode.parentNode);"> </form>'
+		li.innerHTML = st;
+		list.appendChild(li);
+ 	}
+
+	function newChB() {
+		input = document.getElementById("job");
+		var action = AddAction(input.value);
+		action.state = false;
+		newEl(action);
+		input.value = null;
+ 	}
+
+ 	function clik(el) {
+ 		el.children[0].children[0].disabled = true;
+		el.children[0].children[1].setAttribute('style', 'text-decoration: line-through;');
+		el.children[0].children[2].setAttribute('style', 'display: inline;');
+		ChangeAction(el.id, '', true);
+ 	}
+
+ 	function del(el) {
+ 		RemoveAction(el.id);
+ 		el.remove(el);
+ 	}
+
+ 	function edit(el) {
+ 		if (!el.parentNode.children[0].checked)
+ 		{
+ 			var text = el.innerHTML;
+ 			el.innerHTML='<input type="text" value = '+text+' onKeyDown="save();" class="form-control">';
+ 		}
+ 	}
+
+ 	function save() {
+ 		if (event.keyCode == 13){
+ 			var id = event.target.parentNode.parentNode.parentNode.id;
+            event.target.parentNode.innerHTML = event.target.value;
+            ChangeAction(id, event.target.value,false)
+        }
+ 	}
+
+ 	function AddAction(text) {
+ 		var action = {};
+ 		var lastId = +localStorage['lastId']
+		action.name = 'action' + lastId;
+		action.text = text;
+		action.state = false; //true - завершенное, false - незавершенное
+		
+		localStorage['lastId'] = ++lastId; 
+		// console.log(lastId);
+		localStorage[action.name] = JSON.stringify(action);
+		return action;
+ 	}
+
+ 	function ChangeAction(name, text, state) {
+ 		var action = JSON.parse(localStorage[name]);
+ 		if(text != '') {
+ 			action.text = text; 
+ 			localStorage[name] = JSON.stringify(action);
+ 		}
+		if (state)
+		{
+			action.state = state; 		
+			localStorage[action.name] = JSON.stringify(action);
+		}				
+ 	}
+
+ 	function RemoveAction(name) {
+		localStorage.removeItem(name);
+ 	}
+	
+ 	function filterlist(check) {
+ 		var list = Load();
+ 		var result = [];
+ 		if (check)
+ 			{ 				
+ 				for (var i = list.length; i > 0; i--) {
+ 					if (!list[i-1].state) {
+ 						result.push(list[i-1])
+ 					}
+ 				};
+ 			}
+ 			else { 
+ 				 for (var i = list.length; i > 0; i--) {
+ 					 result.push(list[i-1]) 
+ 				 };
+ 		}
+ 		return result;
+ 	}
+	
+ 	function filter(a) {
+ 		var rb = document.getElementById('active');
+ 		var elli = document.getElementById('list');
+ 		var str = document.getElementById("strsearch").value;
+ 		if (a) str='';
+ 		var re = new RegExp('.*'+str+'.*');
+ 		elli.innerHTML = '';
+ 		var list = filterlist(rb.checked);
+ 		for (var i = 0; i < list.length; i++) {
+ 			if (list[i].text.search(re)>-1) newEl(list[i]); 
+ 		}
+ 	}
+	</script>
+
+</head>
+<body>
+<div style="padding: 2% 50% 2% 5%">
+	<h1>Мои задачи</h1>
+	<form class="form-inline" role="form">
+		<input type="text" placeholder="Введите текст..." class="form-control" id="job">
+		<input type="button" value="Добавить" onclick="newChB();" class = "btn btn-primary">
+	</form>
+	<hr>
+	<label>Список дел</label>
+	<ul id="list" class="list-unstyled"> 
+	</ul>
+	<input type="button" value="Очистить весь список" onclick="localStorage.clear(); window.location.reload()" class = "btn btn-primary btn-xs">
+	<hr>
+	<form class="form-inline" role="form">
+		<input type="text" id="strsearch" placeholder="Введите текст..." class="form-control">
+		<input type="button" value="Искать" onclick="filter(false);" class = "btn btn-primary">
+	</form>
+	<br>
+	<label>
+		<input type="radio" name="serchtipe" id="all" checked="checked" onchange="filter(true);">
+		Искать везде
+	</label>
+	<label>
+		<input type="radio" name="serchtipe" id="active" onchange="filter(true);">
+		Искать в активных
+	</label>
+</div>
+</body>
+</html>
